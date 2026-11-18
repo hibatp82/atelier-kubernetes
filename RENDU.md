@@ -2,17 +2,24 @@
 
 > Complétez ce fichier au fil de l'atelier, puis faites un commit et un push (voir la section « Rendu » du README).
 
-**Nom / Prénom :**
-**Groupe :**
+**Nom / Prénom :** AQZIZ Hiba
+**Groupe :** RS2
 
 ---
 
 ## Exercice 1 — Cluster
 
 1. Combien de nœuds affiche `kubectl get nodes` ? Quel est le rôle de chacun ?
-   >
+   >  3 nœuds tous en eeady :
+   > k3d-lab-server-0 (c'est le control-plane). Il héberge l'API Server, le scheduler, le controller-manager et la base d'état du cluster. Il décide où placer les pods.
+   > k3d-lab-agent-0 et k3d-lab-agent-1 (les workers). Ils exécutent les pods des app grâce au kubelet et au runtime de conteneurs containerd
+
 2. Que montre `docker ps` ? Qu'est-ce qu'un « nœud » dans k3d, concrètement ?
-   >
+ > docker ps montre 4 conteneurs :
+      > k3d-lab-server-0, k3d-lab-agent-0, k3d-lab-agent-1 : image `rancher/k3s:v1.35.5-k3s1`
+    >   k3d-lab-serverlb : image k3d-proxy, le load balancer qui relie le port 8081 du Codespace au port 80 du cluster et expose l'API Server
+   Dans k3d un nœud est un conteneur docker qui exécute k3s. Les IP des nœuds sont celles des conteneurs sur le réseau Docker k3d-lab. On simule plusieurs machines sur une seule vm
+
 
 ## Exercice 2 — Premier déploiement
 
