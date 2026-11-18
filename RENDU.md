@@ -50,10 +50,13 @@ car on n'a pas créé un pod isolé mais un Deployment. Son ReplicaSet doit main
 ## Exercice 4 — Déclaratif
 
 7. Quelle différence entre `kubectl create` et `kubectl apply` ?
-   >
-8. À quoi sert le `selector` d'un Service ? Que se passe-t-il s'il ne correspond à aucun pod ?
-   >
+    > `kubectl create` est impératif : on donne un ordre, « crée cet objet ». La commande échoue si l'objet existe déjà (`AlreadyExists`) et elle ne sait pas le mettre à jour.
+   > `kubectl apply -f` est déclaratif : on décrit l'état désiré dans un fichier YAML. Kubernetes crée l'objet s'il n'existe pas, ou le met à jour pour qu'il corresponde au fichier. On peut le relancer autant de fois qu'on veut (idempotent), et les fichiers se versionnent dans Git.
+   > Exemple dans l'atelier : pour changer la page du site, il a suffi de modifier `configmap.yaml` et de relancer `kubectl apply -f k8s/site/`. Avec `create`, il aurait fallu supprimer puis recréer les objets.
 
+8. À quoi sert le `selector` d'un Service ? Que se passe-t-il s'il ne correspond à aucun pod ?
+ > Le `selector` (ici `app: site`) indique au Service vers quels pods envoyer le trafic : tous les pods qui portent ce label. Les adresses IP de ces pods deviennent les endpoints du Service (`kubectl get endpoints site`), et la liste se met à jour toute seule quand des pods sont créés ou supprimés.
+   > S'il ne correspond à aucun pod, le Service existe quand même, mais sans endpoint (liste vide). Les requêtes n'arrivent nulle part : connexion refusée, et le port-forward échoue.
 ## Exercice 5 — Scaling & mises à jour
 
 9. Sur quels nœuds se trouvent vos 3 réplicas ? Collez la sortie de `kubectl get pods -l app=site -o wide`.
@@ -87,7 +90,10 @@ car on n'a pas créé un pod isolé mais un Deployment. Son ReplicaSet doit main
 ## Bonus (facultatif)
 
 14. Bonus réalisés et remarques :
-    >
+    > **A — Ingress** : Ingress `site` → Service `site:80`, servi par Traefik sur le port 8081. Après `kubectl delete pod -l app=site`, le site restait accessible sans rien relancer : contrairement au port-forward, attaché à un seul pod, l'Ingress passe par le Service, qui suit automatiquement les nouveaux pods.
+    > **B — Probes et ressources** : ajout d'une `readinessProbe` HTTP sur `/` (port 80), de `requests` (50m CPU / 32Mi) et de `limits` (100m CPU / 64Mi). Avec la probe sur `/nope`, le nouveau pod restait en `0/1 Running` (« Readiness probe failed: HTTP probe failed with statuscode: 404 ») : il ne recevait aucun trafic, le rolling update était bloqué et les anciens pods continuaient de servir. Les requests servent au scheduler pour placer les pods. Au-delà de la limite mémoire, le conteneur est tué (OOMKilled). Au-delà de la limite CPU, il est ralenti.
+    > **C — Drain** : `kubectl drain k3d-lab-agent-0` a rendu le nœud non planifiable (SchedulingDisabled) et a évincé ses pods, recréés par leurs ReplicaSets sur les autres nœuds. Après `uncordon`, les pods ne sont pas revenus sur agent-0 : Kubernetes ne rééquilibre pas les pods qui tournent déjà. Le nœud ne reçoit que les nouveaux pods, après un scaling ou un redémarrage.
+    > **D — Namespaces** : création du namespace `prod` et déploiement d'une seconde copie du site. Les objets portent les mêmes noms (`site`, `site-html`) sans conflit, car un namespace isole les noms des ressources. Dans Portainer, on filtre l'affichage par namespace.
 
 ---
 
