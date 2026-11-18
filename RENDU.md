@@ -19,14 +19,21 @@
       > k3d-lab-server-0, k3d-lab-agent-0, k3d-lab-agent-1 : image `rancher/k3s:v1.35.5-k3s1`
     >   k3d-lab-serverlb : image k3d-proxy, le load balancer qui relie le port 8081 du Codespace au port 80 du cluster et expose l'API Server
    Dans k3d un nœud est un conteneur docker qui exécute k3s. Les IP des nœuds sont celles des conteneurs sur le réseau Docker k3d-lab. On simule plusieurs machines sur une seule vm
+> Sur un cluster vide les pods système sont dans le namespace kube-system
 
 
 ## Exercice 2 — Premier déploiement
 
 3. Quels objets Kubernetes ont été créés par `kubectl create deployment` ? (indice : `kubectl get all`)
-   >
+   >ça a a créé 3 objets :
+   > un deployment `deployment.apps/web` : il décrit l'état voulu
+   > un replicaSet `replicaset.apps/web-68d995574f` : créé par le Deployment, il maintient le bon nombre de pods
+   > un pod `pod/web-68d995574f-zcjqk` : créé par le ReplicaSet, c'est lui qui exécute le conteneur nginx
+   > le nom du pod se lit ainsi : nom du Deployment et hash du ReplicaSet puis suffixe aléatoire.
+   > Le Service `service/web` vient de la commande kubectl expose Le Service `kubernetes` existe par défaut, il expose l'API Server.
 4. Vous avez supprimé le pod `web-...` : que s'est-il passé, et pourquoi ?
-   >
+> Le pod `web-68d995574f-zcjqk` est passé en `Terminating` puis `Completed`. Un nouveau pod web-68d995574f-djlf6 a été créé (`Pending`, puis `ContainerCreating`, puis `Running` en 2 secondes). Le nom a changé, mais le hash du ReplicaSet `68d995574f` est resté le même
+car on n'a pas créé un pod isolé mais un Deployment. Son ReplicaSet doit maintenir 1 réplica. Quand il voit 0 pod au lieu de 1, il en recrée un
 
 ## Exercice 3 — Modifier un conteneur en direct
 
