@@ -57,13 +57,21 @@ car on n'a pas créé un pod isolé mais un Deployment. Son ReplicaSet doit main
 ## Exercice 5 — Scaling & mises à jour
 
 9. Sur quels nœuds se trouvent vos 3 réplicas ? Collez la sortie de `kubectl get pods -l app=site -o wide`.
-   ```
 
-   ```
+   NAME                   READY   STATUS    RESTARTS   AGE     IP          NODE               NOMINATED NODE   READINESS GATES
+   site-75775484b-dwzg6   1/1     Running   0          22s     10.42.1.6   k3d-lab-agent-1    <none>           <none>
+   site-75775484b-q6kwh   1/1     Running   0          3m22s   10.42.0.6   k3d-lab-agent-0    <none>           <none>
+   site-75775484b-vt6fj   1/1     Running   0          22s     10.42.2.7   k3d-lab-server-0   <none>           <none>
+
+   > Le scheduler a réparti les 3 réplicas sur 3 nœuds différents : agent-0, agent-1 et server-0. Il étale les pods pour qu'une seule panne de nœud ne coupe pas le service. Avec k3s, le control-plane accepte aussi des pods, ce qui n'est pas le cas par défaut sur un cluster Kubernetes classique.
+   > Pendant le rolling update vers nginx:1.28, j'ai observé dans `kubectl get pods -o wide -w` que chaque nouveau pod (ReplicaSet `site-5cc664db9c`) passait en Running avant qu'un ancien pod (ReplicaSet `site-75775484b`) passe en Terminating. Les pods ont été remplacés un par un, sans coupure.
 10. Avec l'image `nginx:9.99`, quel statut avait le pod ? Quelle commande vous a donné la cause ?
-    >
+   > Le nouveau pod `site-fc576997-vb9cq` (un nouveau ReplicaSet `site-fc576997`) est resté en `0/1 ErrImagePull`, puis `ImagePullBackOff`.
+    > La commande `kubectl describe pod site-fc576997-vb9cq` donne la cause dans la section Events : `Failed to pull image "nginx:9.99" ... not found`. Ce tag n'existe pas sur Docker Hub.
 11. Pendant la panne, le site restait-il accessible ? Pourquoi ?
-    >
+     > Oui , les 3 anciens pods en nginx:1.28 (`site-5cc664db9c-cwlf4`, `-hhqwq`, `-nmvrp`) sont restés `1/1 Running`.
+    > Un rolling update ne supprime un ancien pod qu'une fois le nouveau prêt. Le pod 9.99 n'ayant jamais démarré, aucun ancien pod n'a été retiré, et le Service a continué à envoyer le trafic aux pods sains. Avec la stratégie par défaut (maxUnavailable 25 %, soit 0 pod sur 3), Kubernetes ne descend jamais sous 3 pods disponibles.
+    > `kubectl rollout undo` est ensuite revenu à nginx:1.28. `kubectl diff -f k8s/site/` n'affichait plus rien : le cluster correspondait de nouveau aux fichiers YAML.
 
 ## Exercice 6 — Portainer & Mario
 
