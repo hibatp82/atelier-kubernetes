@@ -38,9 +38,14 @@ car on n'a pas créé un pod isolé mais un Deployment. Son ReplicaSet doit main
 ## Exercice 3 — Modifier un conteneur en direct
 
 5. Après suppression du pod, votre message « Bienvenue... » a-t-il survécu ? Pourquoi ?
-   >
+   > Non après la relance du tunnel la page affiche de nouveau bienvenue
+   > Le système de fichiers d'un conteneur est éphémère. La modification faite avec `kubectl exec` n'existait que dans le conteneur du pod supprimé. Le ReplicaSet a recréé un pod neuf à partir de l'image `nginx` d'origine qui ne contient pas ma modification.
+   > Il ne faut donc jamais modifier un conteneur à la main , le contenu doit être décrit en dehors du conteneur, dans l'image.
+
 6. Pourquoi le `port-forward` a-t-il cessé de fonctionner après la suppression du pod ?
-   >
+   > Même lancé sur svc/web un kubectl port-forward ne passe pas vraiment par le service, il choisit un seul pod derrière le Service au démarrage et s'y attache directement
+   > Quand ce pod a été supprimé, son réseau a été détruit. Le log `/tmp/web.log` nos montre que network namespace for sandbox ... is clos puis `error: lost connection to pod`, et le tunnel s'est arrêté (`Exit 1`).
+   > Le tunnel ne bascule pas tout seul vers le nouveau pod il faut le relancer
 
 ## Exercice 4 — Déclaratif
 
