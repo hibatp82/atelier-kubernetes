@@ -78,9 +78,11 @@ car on n'a pas créé un pod isolé mais un Deployment. Son ReplicaSet doit main
 ## Exercice 6 — Portainer & Mario
 
 12. URL publique de votre Mario :
-    >
+    > https://literate-invention-5gw9jp54x6pph7g7q-8585.app.github.dev/
 13. Retrouvez le Deployment `mario` en ligne de commande. Portainer et `kubectl` parlent-ils au même composant ? Lequel ?
-    >
+     > Oui. `kubectl get deploy mario -o yaml` affiche le Deployment créé depuis Portainer. C'est un Deployment Kubernetes standard (`apiVersion: apps/v1`), avec le même `selector`/`template` et la même stratégie RollingUpdate (maxSurge et maxUnavailable à 25 %) que `site` ou `web`.
+    > La seule différence vient des labels ajoutés par Portainer pour suivre ses applications : `io.portainer.kubernetes.application.owner: admin`, `io.portainer.kubernetes.application.kind: content`, `io.portainer.kubernetes.application.stackid: "1"`, etc.
+    > Portainer et kubectl parlent au même composant : l'API Server du control-plane (k3d-lab-server-0). kubectl l'appelle depuis le Codespace avec le kubeconfig. Portainer tourne dans le cluster : il l'appelle avec son ServiceAccount, via l'adresse interne `kubernetes.default.svc` affichée dans le Dashboard de Portainer. L'API Server est le point d'entrée unique du cluster, donc interface graphique ou ligne de commande, c'est le même état qu'on lit et qu'on modifie.
 
 ## Bonus (facultatif)
 
