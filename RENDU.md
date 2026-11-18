@@ -66,8 +66,10 @@ car on n'a pas créé un pod isolé mais un Deployment. Son ReplicaSet doit main
    > Le scheduler a réparti les 3 réplicas sur 3 nœuds différents : agent-0, agent-1 et server-0. Il étale les pods pour qu'une seule panne de nœud ne coupe pas le service. Avec k3s, le control-plane accepte aussi des pods, ce qui n'est pas le cas par défaut sur un cluster Kubernetes classique.
    > Pendant le rolling update vers nginx:1.28, j'ai observé dans `kubectl get pods -o wide -w` que chaque nouveau pod (ReplicaSet `site-5cc664db9c`) passait en Running avant qu'un ancien pod (ReplicaSet `site-75775484b`) passe en Terminating. Les pods ont été remplacés un par un, sans coupure.
 10. Avec l'image `nginx:9.99`, quel statut avait le pod ? Quelle commande vous a donné la cause ?
-   > Le nouveau pod `site-fc576997-vb9cq` (un nouveau ReplicaSet `site-fc576997`) est resté en `0/1 ErrImagePull`, puis `ImagePullBackOff`.
-    > La commande `kubectl describe pod site-fc576997-vb9cq` donne la cause dans la section Events : `Failed to pull image "nginx:9.99" ... not found`. Ce tag n'existe pas sur Docker Hub.
+    > Le nouveau pod `site-fc576997-vb9cq` (sur k3d-lab-agent-1) est resté en `0/1` et alternait entre `ErrImagePull` et `ImagePullBackOff` : 4 tentatives de téléchargement en 105 s, avec une attente de plus en plus longue entre chaque.
+    > La commande `kubectl describe pod site-fc576997-vb9cq` donne la cause dans la section Events :
+    > `Failed to pull image "nginx:9.99": rpc error: code = NotFound ... docker.io/library/nginx:9.99: not found`
+    > Le tag 9.99 n'existe pas sur Docker Hub, donc le kubelet ne peut pas télécharger l'image.
 11. Pendant la panne, le site restait-il accessible ? Pourquoi ?
      > Oui , les 3 anciens pods en nginx:1.28 (`site-5cc664db9c-cwlf4`, `-hhqwq`, `-nmvrp`) sont restés `1/1 Running`.
     > Un rolling update ne supprime un ancien pod qu'une fois le nouveau prêt. Le pod 9.99 n'ayant jamais démarré, aucun ancien pod n'a été retiré, et le Service a continué à envoyer le trafic aux pods sains. Avec la stratégie par défaut (maxUnavailable 25 %, soit 0 pod sur 3), Kubernetes ne descend jamais sous 3 pods disponibles.
